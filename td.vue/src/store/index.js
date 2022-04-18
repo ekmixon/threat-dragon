@@ -13,7 +13,7 @@ import vuexPersist from '../plugins/vuex-persist.js';
 
 let store = null;
 const version = require('../../package.json').version;
-const build = require('../../package.json').build;
+const build = require('../../package.json').buildState;
 
 const get = () => {
     if (store === null) {
@@ -21,7 +21,7 @@ const get = () => {
         store = new Vuex.Store({
             state: {
                 packageVersion: version,
-                packageBuild: build
+                packageBuildState: build
             },
             modules: {
                 auth,
