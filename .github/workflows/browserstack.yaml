@@ -1,8 +1,13 @@
 name: Browserstack End to End Tests
 concurrency: browserstack_e2e
 on:
-  schedule:
-    - cron: '40 8 * * *'
+  # schedule:
+  #   - cron: '35 8 * * *'
+  push:
+    branches:
+      # If you're seeing this, Jon forgot to remove it.
+      # This is for debugging only, and this should still be a cron
+      - 'bodging-browserstack'
 jobs:
   browserstack_e2e:
     runs-on: ubuntu-latest
