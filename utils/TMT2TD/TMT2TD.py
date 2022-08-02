@@ -121,30 +121,22 @@ def set_cell_attribs(cell, _name):
     if len(cell['threats']) == 0:
         del cell['threats']
         cell['hasOpenThreats'] = False
-    if (cell['hasOpenThreats']):
-        threats = str('hasNoOpenThreats')
-    else:
-        threats = str('hasNoOpenThreats')
-
-    if (cell['outOfScope']):
-        scope = str('isOutOfScope')
-    else:
-        scope = str('isInScope')
+    threats = 'hasNoOpenThreats'
+    scope = 'isOutOfScope' if cell['outOfScope'] else 'isInScope'
     if cell['type'] == "tm.Flow":
         cell['attrs'] = dict.fromkeys(['.marker-target','.connection'])
         #check and set both hasNoOpenThreats isInScope vars based on MS TMT
         cell['attrs']['.marker-target'] = dict.fromkeys(['class'])
         #build sentance
-        cell['attrs']['.marker-target']['class'] = "marker-target " + threats + " isInScope"
+        cell['attrs']['.marker-target']['class'] = f"marker-target {threats} isInScope"
         cell['attrs']['.connection'] = dict.fromkeys(['class'])
-        cell['attrs']['.connection']['class'] = "connection " + threats+ " " + scope
-    #everything that's not a flow
+        cell['attrs']['.connection']['class'] = f"connection {threats} {scope}"
     else:
         cell['attrs'] = dict.fromkeys(['.element-shape','text','.element-text'])
         cell['attrs']['.element-shape'] = dict.fromkeys(['class'])
-        cell['attrs']['.element-shape']['class'] = "element-shape " + threats+ " " + scope
+        cell['attrs']['.element-shape']['class'] = f"element-shape {threats} {scope}"
         cell['attrs']['.element-text'] = dict.fromkeys(['class'])
-        cell['attrs']['.element-text']['class']= "element-text " + threats + " isInScope"
+        cell['attrs']['.element-text']['class'] = f"element-text {threats} isInScope"
         cell['attrs']['text'] = dict.fromkeys(['text'])
         cell['attrs']['text']['text'] = _name
     return cell
@@ -152,12 +144,16 @@ def set_cell_attribs(cell, _name):
 # find type, source, target, and vertices
 def find_ele_type(tmt_type, ele, _name):
     tmt_type = tmt_type['{http://www.w3.org/2001/XMLSchema-instance}type']
-    if tmt_type == "Connector" or tmt_type == "LineBoundary" or tmt_type == "BorderBoundary":
+    if tmt_type in ["Connector", "LineBoundary", "BorderBoundary"]:
         # flows have source and target, so choose different dict format
         cell = dict.fromkeys(['type', 'size', 'smooth','source','target','vertices','id', 'z','hasOpenThreats','threats','attrs'])
-        cell['vertices'] = list()
-        if tmt_type == "Connector":
-            cell['labels'] = list()
+        cell['vertices'] = []
+        if tmt_type == "BorderBoundary":
+            ele_type = "tm.Boundary"
+            cell = calc_boundary_box(cell, ele)
+            cell['attrs'] = {}
+        elif tmt_type == "Connector":
+            cell['labels'] = []
             cell['labels'].append(dict.fromkeys(['position','attrs']))
             cell['labels'][0]['position'] = 0.5
             cell['labels'][0]['attrs'] = dict.fromkeys(['text'])
@@ -166,40 +162,32 @@ def find_ele_type(tmt_type, ele, _name):
             cell['labels'][0]['attrs']['text']['font-weight'] = str(400)
             cell['labels'][0]['attrs']['text']['font-size'] = 'small'
             ele_type = "tm.Flow"
-        elif tmt_type == "LineBoundary" or tmt_type == "BorderBoundary":
-            ele_type = "tm.Boundary"
-            if tmt_type == "BorderBoundary":
-                cell = calc_boundary_box(cell, ele)
-            cell['attrs'] = dict()
-        else:
-            return None
-        #  get cords from MS TMT "lines" since boundaries and lines are different in MS TMT
-        if tmt_type == "LineBoundary":
-            get_boundary_points(cell, ele)
-        elif tmt_type == "Connector":
             get_flow_points(cell, ele)
+        else:
+            ele_type = "tm.Boundary"
+            cell['attrs'] = {}
+            get_boundary_points(cell, ele)
         cell['smooth'] = True
         cell['size'] = dict.fromkeys(['width','height'])
         # defaults size for boundary or flows
-        cell['size']['width'] = int(10)
-        cell['size']['height'] = int(10)
+        cell['size']['width'] = 10
+        cell['size']['height'] = 10
 
-    # must be a process, datastore, or EI
     else:
         cell = dict.fromkeys(['type','size','position','angle','id', 'z','hasOpenThreats','threats','attrs'])
         cell['size'] = dict.fromkeys(['width','height'])
         cell['position'] = dict.fromkeys(['x','y'])
-        cell['angle'] = int(0)
-        if tmt_type == "StencilRectangle":
-            ele_type = "tm.Actor"
-        elif tmt_type == "StencilEllipse":
+        cell['angle'] = 0
+        if tmt_type == "StencilEllipse":
             ele_type = "tm.Process"
         elif tmt_type == "StencilParallelLines":
             ele_type = "tm.Store"
+        elif tmt_type == "StencilRectangle":
+            ele_type = "tm.Actor"
         else:
             return None
         cell = get_ele_size(cell, ele)
-    cell['threats'] = list()
+    cell['threats'] = []
     cell['type'] = ele_type
     return cell
 
@@ -396,7 +384,7 @@ def main():
 
     # get file name
     base_name = os.path.splitext(file_path)[0]
-    file_path = base_name + '.json'
+    file_path = f'{base_name}.json'
 
     model = dict.fromkeys(['summary','detail'])
     summary = get_sum(root)
@@ -408,7 +396,7 @@ def main():
     # find all note elements
     notes = get_notes(root)
 
-    diagrams = list()
+    diagrams = []
     model['detail']['diagrams'] = diagrams
     # add diagrams
     with open(file_path, 'w') as outfile:
@@ -426,7 +414,7 @@ def main():
             model['detail']['diagrams'][diagram_num]['thumbnail'] = "./public/content/images/thumbnail.stride.jpg"
             # cells contain all stencils and flows
             model['detail']['diagrams'][diagram_num]['diagramJson'] = dict.fromkeys(['cells'])
-            model['detail']['diagrams'][diagram_num]['diagramJson']['cells'] = list()
+            model['detail']['diagrams'][diagram_num]['diagramJson']['cells'] = []
             for ele in child.findall('{http://schemas.datacontract.org/2004/07/ThreatModeling.Model}DrawingSurfaceModel'):
                 model['detail']['diagrams'][diagram_num]['size'] = get_diagram_size(ele)
                 for d_guid in ele.findall('{http://schemas.datacontract.org/2004/07/ThreatModeling.Model.Abstracts}Guid'):

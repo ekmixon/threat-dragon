@@ -24,20 +24,15 @@ def git_pull(repo):
 
 def git_clone(remote_path, local_path):
     try:
-        repo = Repo.clone_from(
-            remote_path,
-            local_path,
-            branch='master'
-        )
-        return repo
+        return Repo.clone_from(remote_path, local_path, branch='master')
+
     except Exception as e:
         log.logger.error("Exception occurred while cloning code", exc_info=True)
         mail.sendErrorEmail("Threat Model: Exception occurred while cloning code", e)  
         raise e
 
 def get_status(repo):
-    changed = [ item.a_path for item in repo.index.diff(None) ]
-    return changed
+    return [ item.a_path for item in repo.index.diff(None) ]
 
 def discover_git(remote_path, local_path):
     try:

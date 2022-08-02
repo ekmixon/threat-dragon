@@ -9,10 +9,9 @@ import third_party_integration
 def handleTitle(threatTitle, threatStatus):
     titleInJira = ""
     if threatStatus == "Mitigated":
-        titleInJira = "[TO CLOSE] - " + threatTitle
+        return f"[TO CLOSE] - {threatTitle}"
     else:
-        titleInJira = threatTitle
-    return titleInJira
+        return threatTitle
 
 # Concatenate description and mitigation
 def handleDescription(description, mitigation):
@@ -21,19 +20,17 @@ def handleDescription(description, mitigation):
 # Check if we have a new issue for Jira
 def checkDescription(description):
     # return first occurrence of [ ]
-    beginTag = description.find('[') 
+    beginTag = description.find('[')
     endTag = description.find(']') 
 
     if beginTag != -1 and endTag != -1:
         issueKey = description[beginTag+1:endTag]
-        if len(issueKey) > 0:
-            return issueKey    
-        else:
+        if len(issueKey) <= 0:
             issueKey = "New"
-            return issueKey
     else:
         issueKey = "New"
-        return issueKey
+
+    return issueKey
 
 
 # Matching the Severety to set up the Priority
@@ -50,7 +47,7 @@ def checkTitle(title):
     outcome = False
 
     # return first occurrence of [ ]
-    beginTag = title.find('[') 
+    beginTag = title.find('[')
     endTag = title.find(']') 
 
     if beginTag != -1 and endTag != -1:
@@ -62,7 +59,7 @@ def checkTitle(title):
         if len(epicJiraKey) > 0:
             beginDash = title.find('-')
             if beginDash != -1:
-                projectJiraKey = epicJiraKey[0:beginDash-1]
+                projectJiraKey = epicJiraKey[:beginDash-1]
                 if len(projectJiraKey) > 0:
                     outcome = True
 
@@ -91,15 +88,12 @@ def parseJson(obj, threatJasonPath):
 
 
         # Process the JSON files
-        for (i) in obj['detail']['diagrams']:
-            
-            # Check if we have JSON files from Threat Dragon with a Jira key
-            processJSON = checkTitle(i['title'])
+        for i in obj['detail']['diagrams']:
 
-            if processJSON:
+            if processJSON := checkTitle(i['title']):
                 log.logger.info(f'Start processing {threatJasonPath} :: {projectJiraKey} (Jira) :: {epicJiraKey} (Epic) ')
 
-                for (j) in i['diagramJson']['cells']:
+                for j in i['diagramJson']['cells']:
                     print("ID: " + j['id'])
                     print("Type: " + j['type'])
 
@@ -108,8 +102,8 @@ def parseJson(obj, threatJasonPath):
                         # We have examples with id and not with ruleId
                         if 'threats' in j:
                             print("Has Threats: yes")
-                        
-                            for (k) in j['threats']:
+
+                            for k in j['threats']:
 
                                 finalDesc = "No description"
                                 if 'description' in k:
@@ -162,26 +156,22 @@ def parseJson(obj, threatJasonPath):
                                     else:
                                         k['description'] = '[' + res['key'] + '] '+ k['description']
 
-                                else:
-                                    if k['status'] != "Mitigated":
-                                        # Function to get issues
-                                        res = third_party_integration.get_issue(strJiraKey)
+                                elif k['status'] != "Mitigated":
+                                    # Function to get issues
+                                    res = third_party_integration.get_issue(strJiraKey)
 
                                         # Check if the call was successful to update the status to Mitigated
-                                        if 'errorMessages' in res:
-                                            log.logger.error(f"Request has failed for {strJiraKey}")
-                                            if len(res['errorMessages']) > 0:
-                                                log.logger.error(f"{res['errorMessages']}") 
-                                            else:
-                                                log.logger.error(f"{res['errors']}") 
+                                    if 'errorMessages' in res:
+                                        log.logger.error(f"Request has failed for {strJiraKey}")
+                                        if len(res['errorMessages']) > 0:
+                                            log.logger.error(f"{res['errorMessages']}") 
                                         else:
-                                            if res['fields']['status']['name'] == 'Closed':
-                                                k['status'] = 'Mitigated'
+                                            log.logger.error(f"{res['errors']}")
+                                    elif res['fields']['status']['name'] == 'Closed':
+                                        k['status'] = 'Mitigated'
 
-                                                # Sending emails
-                                                subject = "Threat Model Security - Threat closed"
-                                                body = f"{projectJiraKey} - {k['description']} was closed."
-                                                mail.sendEmail(subject, body, receiver)
+                                        body = f"{projectJiraKey} - {k['description']} was closed."
+                                        mail.sendEmail("Threat Model Security - Threat closed", body, receiver)
 
                                 if k['status'] != "Mitigated":
                                     print(json.dumps(res, sort_keys=True, indent=4, separators=(",", ": ")))
@@ -190,18 +180,15 @@ def parseJson(obj, threatJasonPath):
                         else:
                             print("Has Threats: No")
                     print('')
-                    
+
                 print('')
                 print('---------------')
 
-                # Save the changes to JSON file
-                JSON_file = open(threatJasonPath, 'w+') 
-                JSON_file.write(json.dumps(obj, indent=2))
-                JSON_file.close()
-        
+                with open(threatJasonPath, 'w+') as JSON_file:
+                    JSON_file.write(json.dumps(obj, indent=2))
             else:
                 log.logger.info(f'Start processing {threatJasonPath} ')
-                log.logger.info(f'Missing Jira Key in the Threat Model diagram.')
+                log.logger.info('Missing Jira Key in the Threat Model diagram.')
 
     except Exception as e:
         log.logger.error("Exception occurred", exc_info=True)        

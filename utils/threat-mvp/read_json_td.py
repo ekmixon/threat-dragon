@@ -4,15 +4,10 @@ import json
 
 def read_json(threatJasonPath):
     try:
-        # read the Threat Dragon JSON file 
-        JSON_file = open(threatJasonPath, 'r') 
-        dataTM = JSON_file.read()
-        JSON_file.close()
+        with open(threatJasonPath, 'r') as JSON_file:
+            dataTM = JSON_file.read()
+        return json.loads(dataTM)
 
-        # return a dictionary
-        obj = json.loads(dataTM)
-        return obj
-   
     except FileNotFoundError as e2:
          log.logger.error("File not accessible")
          mail.sendErrorEmail("Threat Model: Exception occurred reading the JSON file", e)  

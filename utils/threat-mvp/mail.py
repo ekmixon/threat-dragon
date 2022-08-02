@@ -21,11 +21,11 @@ def sendErrorEmail(subject, body):
 def sendEmail(subject, body, receiver):
     try: 
         emailEnable = config['email']['sendingEmails']
-        sendingEmails = str(emailEnable).lower() in ("yes", "true")
+        sendingEmails = str(emailEnable).lower() in {"yes", "true"}
 
     except Exception as e:
         sendingEmails = False
-    
+
     try:    
         if sendingEmails:
             port = config['email']['port']

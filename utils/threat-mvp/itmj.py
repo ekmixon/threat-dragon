@@ -31,31 +31,29 @@ def readArgs():
 
     return outcome
 
-if __name__== "__main__" :
+if __name__== "__main__":
 
     localSource = config['app']['localSource']
-    gitEnabled = str(config['app']['gitEnabled']).lower() in ("yes", "true")
+    gitEnabled = str(config['app']['gitEnabled']).lower() in {"yes", "true"}
 
     if gitEnabled:
         remoteSource = config['app']['remoteSource']
         repo = git_party_integration.discover_git(remoteSource, localSource)
         git_party_integration.git_pull(repo)
 
-    # Check if we want to run an individual JSON file
-    getParams = readArgs()
-    if getParams:
-        log.logger.info(f'Process Individual')
+    if getParams := readArgs():
+        log.logger.info('Process Individual')
         files = [threatJasonPath]
     else:
-        log.logger.info(f'Process All')    
-        files = [threatJasonPath for threatJasonPath in glob.glob(localSource +  "/**/*.json", recursive=True)]
+        log.logger.info('Process All')
+        files = list(glob.glob(f"{localSource}/**/*.json", recursive=True))
 
     # Loop through all the JSON files
     for threatJasonPath in files:
         dictDragon = read_json_td.read_json(threatJasonPath)
         parse_json_td.parseJson(dictDragon, threatJasonPath)
         log.logger.info(f'Finish processing \n')
-    
+
     if gitEnabled:
         filesUpdated = git_party_integration.get_status(repo)
         if len(filesUpdated) > 0:

@@ -26,7 +26,7 @@ def doRequest(action, url, params="", data=""):
             'Accept': 'application/json',
             'Content-type':'application/json'
         }
-        
+
         # Convert data to json send
         obj = json.dumps(data)
         r = requests.request(
@@ -44,12 +44,12 @@ def doRequest(action, url, params="", data=""):
         mail.sendErrorEmail("Threat Model: Exception occurred in the third party integration", e) 
 
 def create_issue(obj):
-    data = doRequest("POST", f'{urlIntegration}/rest/api/2/issue', "", obj)
-    return data
+    return doRequest("POST", f'{urlIntegration}/rest/api/2/issue', "", obj)
 
 def get_issue(issueKey):
     params = {
         'fields': 'status'
     }
-    data = doRequest("GET", f'{urlIntegration}/rest/api/2/issue/{issueKey}', params)
-    return data
+    return doRequest(
+        "GET", f'{urlIntegration}/rest/api/2/issue/{issueKey}', params
+    )
